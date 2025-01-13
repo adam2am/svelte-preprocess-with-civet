@@ -50,6 +50,15 @@ const config = {
 export default config;
 ```
 
+## When to use it?
+
+Historically, `svelte-preprocess` was the go-to option whenever you had a language other than JS/HTML/CSS used inside your Svelte files. Today, depending on your setup, you may no longer need it:
+
+- If you're using Svelte 5 and are only using type features of TypeScript (i.e. things that just "go away" after transpiling to JS), you don't need any preprocessor, Svelte handles this natively
+- If you're using Vite and are using TypeScript or common CSS preprocessors (PostCSS, SCSS, Less, ...), use the preprocessor that comes with vite-plugin-svelte instead
+
+If these cases don't apply to you, use `svelte-preprocess`.
+
 ## Features
 
 ### Template tag

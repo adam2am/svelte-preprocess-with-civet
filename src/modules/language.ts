@@ -5,6 +5,9 @@ import { isValidLocalPath } from './utils';
 import type { PreprocessorArgs } from '../types';
 
 const LANGUAGE_DEFAULTS: Record<string, any> = {
+  civet: {
+    stripIndent: true,
+  },
   sass: {
     indentedSyntax: true,
     stripIndent: true,
@@ -27,6 +30,7 @@ const LANGUAGE_DEFAULTS: Record<string, any> = {
 };
 
 export const ALIAS_MAP = new Map([
+  ['civet', 'civet'],
   ['pcss', 'css'],
   ['postcss', 'css'],
   ['sugarss', 'css'],

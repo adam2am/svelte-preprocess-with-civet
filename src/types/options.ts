@@ -3,6 +3,7 @@ import type { LegacyStringOptions } from 'sass';
 // @ts-ignore possibly not installed in user-land
 import type * as postcss from 'postcss';
 // @ts-ignore possibly not installed in user-land
+import type { ParseOptions } from '@danielx/civet';
 import type { Options as PugOptions } from 'pug';
 // @ts-ignore possibly not installed in user-land
 import type { TransformOptions as BabelOptions } from '@babel/core';
@@ -15,6 +16,13 @@ type ContentModifier = {
 type MarkupOptions = {
   markupTagName?: string;
 };
+
+export type Civet = {
+  filename?: string;
+  js?: boolean;
+  sourceMap?: boolean;
+  parseOptions?: ParseOptions;
+} & ContentModifier;
 
 export type Coffeescript = {
   sourceMap?: boolean;

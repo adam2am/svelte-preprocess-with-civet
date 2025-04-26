@@ -11,6 +11,7 @@ export default exports = module.exports = sveltePreprocess;
 export { sveltePreprocess } from './autoProcess';
 
 // stand-alone processors to be included manually, use their named exports for better transpilation or else node will not detect the named exports properly
+export { default as civet } from './processors/civet';
 export { pug } from './processors/pug';
 export { coffeescript } from './processors/coffeescript';
 export { typescript } from './processors/typescript';

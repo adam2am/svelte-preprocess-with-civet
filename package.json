@@ -1,6 +1,6 @@
 {
-  "name": "svelte-preprocess",
-  "version": "6.0.3",
+  "name": "svelte-preprocess-with-civet",
+  "version": "6.0.3.1",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,11 +12,12 @@
     },
     "./package.json": "./package.json"
   },
-  "description": "A Svelte preprocessor wrapper with baked-in support for commonly used preprocessors",
-  "author": "Christian Kaisermann <christian@kaisermann.me>",
-  "repository": "https://github.com/sveltejs/svelte-preprocess",
+  "description": "A fork of Svelte preprocessor wrapper with baked-in support for commonly used preprocessors",
+  "author": "adam2am<adam2am@outlook.com>",
+  "repository": "https://github.com/adam2am/svelte-preprocess-with-civet",
   "keywords": [
     "svelte",
+    "civet",
     "preprocess",
     "typescript",
     "less",

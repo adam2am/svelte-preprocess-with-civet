@@ -12,7 +12,7 @@
     },
     "./package.json": "./package.json"
   },
-  "description": "A fork of Svelte preprocessor wrapper with baked-in support for commonly used preprocessors",
+  "description": "Fork of a Svelte preprocessor wrapper with baked-in support for commonly used preprocessors (with Civet support)",
   "author": "adam2am<adam2am@outlook.com>",
   "repository": "https://github.com/adam2am/svelte-preprocess-with-civet",
   "keywords": [

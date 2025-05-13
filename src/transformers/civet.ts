@@ -21,7 +21,7 @@ const transformer: Transformer<Options.Civet> = ({
   };
 
   if (civetCompilationOptions.sourceMap && !civetCompilationOptions.inlineMap) {
-    const civetResult = civet.compile(content, { ...civetCompilationOptions, sourceMap: true, ast: undefined }) as { code: string; sourceMap?: CivetSourceMapInstance }; // Type assertion
+    const civetResult = civet.compile(content, { ...civetCompilationOptions, sourceMap: true, ast: undefined }) as unknown as { code: string; sourceMap?: CivetSourceMapInstance }; // Type assertion
     
     if (typeof civetResult === 'object' && civetResult !== null && civetResult.code && civetResult.sourceMap && typeof civetResult.sourceMap.json === 'function') {
       // Generate a suitable output filename for the map, e.g., original.civet.ts

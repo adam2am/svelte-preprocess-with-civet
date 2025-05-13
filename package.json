@@ -1,6 +1,6 @@
 {
   "name": "svelte-preprocess-with-civet",
-  "version": "6.0.3.1",
+  "version": "6.0.31",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -20,7 +20,8 @@ type MarkupOptions = {
 export type Civet = {
   filename?: string;
   js?: boolean;
-  sourceMap?: boolean;
+  sourceMap?: boolean; // For requesting { code, sourceMap } object from Civet
+  inlineMap?: boolean; // For requesting code with inline map comment from Civet
   parseOptions?: ParseOptions;
 } & ContentModifier;
 

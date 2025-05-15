@@ -50,7 +50,7 @@ describe('transformer - typescript', () => {
   });
 
   it('should throw if errors are found', async () => {
-    await expect(autoProcessTS('export l et 0')).rejects.toThrow();
+    await expect(autoProcessTS('export let 0')).rejects.toThrow();
   });
 
   describe('configuration file', () => {

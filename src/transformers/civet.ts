@@ -20,14 +20,15 @@ const transformer: Transformer<Options.Civet> = ({
     ...options, 
     sync: true, 
   };
+  const outputLang = civetCompilationOptions.js ? 'js' : 'ts';
 
   if (civetCompilationOptions.sourceMap && !civetCompilationOptions.inlineMap) {
     const civetResult = civet.compile(content, { ...civetCompilationOptions, sourceMap: true, ast: undefined }) as unknown as { code: string; sourceMap?: CivetSourceMapInstance }; // Type assertion
     
     if (typeof civetResult === 'object' && civetResult !== null && civetResult.code && civetResult.sourceMap && typeof civetResult.sourceMap.json === 'function') {
-      const outputMapFileName = filename ? `${filename}.ts` : 'output.ts';
+      const outputMapFileName = filename ? `${filename}.${outputLang}` : `output.${outputLang}`;
       const v3Map = civetResult.sourceMap.json(filename || 'input.civet', outputMapFileName);
-      return { code: civetResult.code, map: v3Map, attributes: { ...attributes, lang: 'ts' } }; // Added attributes
+      return { code: civetResult.code, map: v3Map, attributes: { ...attributes, lang: outputLang } };
     } else {
       console.warn(
         'svelte-preprocess-with-civet: Civet did not return expected { code, sourceMap with json() } object ' +
@@ -35,7 +36,7 @@ const transformer: Transformer<Options.Civet> = ({
       );
       const fallbackCode = typeof civetResult === 'object' && civetResult !== null && civetResult.code ? civetResult.code : 
                            typeof civetResult === 'string' ? civetResult : content; 
-      return { code: fallbackCode, attributes: { ...attributes, lang: 'ts' } }; // Added attributes
+      return { code: fallbackCode, attributes: { ...attributes, lang: outputLang } };
     }
   }
   else if (civetCompilationOptions.inlineMap) {
@@ -47,20 +48,20 @@ const transformer: Transformer<Options.Civet> = ({
         'and extracting the map object is not yet fully implemented in this preprocessor. ' +
         'The raw code (including the inline map comment) will be returned without a separate map object.'
       );
-      return { code: compiledCodeWithInlineMap, attributes: { ...attributes, lang: 'ts' } }; // Added attributes
+      return { code: compiledCodeWithInlineMap, attributes: { ...attributes, lang: outputLang } };
     } else {
       console.warn(
         'svelte-preprocess-with-civet: Civet did not return expected string output ' +
         'when called with inlineMap:true and sync:true. Output from Civet:', compiledCodeWithInlineMap
       );
       const fallbackCode = typeof compiledCodeWithInlineMap === 'string' ? compiledCodeWithInlineMap : content;
-      return { code: fallbackCode, attributes: { ...attributes, lang: 'ts' } }; // Added attributes
+      return { code: fallbackCode, attributes: { ...attributes, lang: outputLang } };
     }
   }
   else {
     const compiledCode = civet.compile(content, civetCompilationOptions);
     if (typeof compiledCode === 'string'){
-        return { code: compiledCode, attributes: { ...attributes, lang: 'ts' } }; // Added attributes
+        return { code: compiledCode, attributes: { ...attributes, lang: outputLang } };
     } else {
         console.warn(
             'svelte-preprocess-with-civet: Civet did not return expected string output ' +
@@ -68,7 +69,7 @@ const transformer: Transformer<Options.Civet> = ({
         );
         const fallbackCode = typeof compiledCode === 'object' && compiledCode !== null && (compiledCode as any).code ? (compiledCode as any).code :
                              typeof compiledCode === 'string' ? compiledCode : content;
-        return { code: fallbackCode, attributes: { ...attributes, lang: 'ts' } }; // Added attributes
+        return { code: fallbackCode, attributes: { ...attributes, lang: outputLang } };
     }
   }
 };

@@ -57,7 +57,7 @@
     ]
   },
   "devDependencies": {
-    "@danielx/civet": "^0.10.3",
+    "@danielx/civet": "^0.10.4",
     "@babel/core": "^7.27.1",
     "@babel/preset-env": "^7.27.2",
     "@commitlint/cli": "^19.8.1",

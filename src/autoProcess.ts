@@ -20,6 +20,7 @@ import type {
   TransformerArgs,
   TransformerOptions,
   Transformers,
+  Options,
 } from './types';
 
 const TARGET_LANGUAGES = Object.freeze({
@@ -180,26 +181,65 @@ export function sveltePreprocess(
     });
   };
 
-  const script: PreprocessorGroup['script'] = async ({
-    content,
-    attributes,
-    markup: fullMarkup,
-    filename,
-  }) => {
-    const transformResult = await scriptTransformer({
-      content,
-      attributes,
-      markup: fullMarkup,
-      filename,
-    });
+  const script: PreprocessorGroup['script'] = async (svelteFile) => {
+    // scriptTransformer will call the Civet processor (or others based on lang)
+    const transformResult = (await scriptTransformer(
+      svelteFile,
+    )) as Processed & { attributes?: Record<string, any> };
 
-    let { code, map, dependencies, diagnostics } = transformResult;
+    let {
+      code,
+      map,
+      dependencies,
+      diagnostics,
+      attributes: resultAttributes,
+    } = transformResult;
+
+    const originalTagInfo = await getTagInfo(svelteFile);
+
+    // If the transformer (e.g., Civet) outputted TypeScript,
+    // and the original lang wasn't already 'typescript' (to avoid double processing),
+    // and a TypeScript transformer is configured in svelte-preprocess.
+    if (
+      resultAttributes?.lang === 'ts' &&
+      originalTagInfo.lang !== 'typescript' &&
+      transformers.typescript // Check if a TS transformer is configured/enabled
+    ) {
+      const { transformer: svelteTsTransformer } = await import(
+        './transformers/typescript'
+      );
+      // Get the options configured for the main svelte-preprocess typescript transformer
+      const tsTransformerOptions = getTransformerOptions('typescript', null);
+
+      const tsProcessed = await svelteTsTransformer({
+        content: code, // Input is the TS code from the previous step (e.g., Civet)
+        markup: svelteFile.markup,
+        filename: svelteFile.filename,
+        attributes: resultAttributes, // Pass the new attributes ({ lang: 'ts' })
+        options:
+          typeof tsTransformerOptions === 'boolean'
+            ? undefined
+            : (tsTransformerOptions as Options.Typescript),
+        map: map as any, // Pass the source map from the previous step
+      });
+
+      code = tsProcessed.code;
+      map = tsProcessed.map;
+      dependencies = concat(dependencies, tsProcessed.dependencies);
+      diagnostics = concat(diagnostics, tsProcessed.diagnostics);
+    }
 
     if (transformers.babel) {
       const transformed = await transform(
         'babel',
         getTransformerOptions('babel'),
-        { content: code, markup: fullMarkup, map, filename, attributes },
+        {
+          content: code,
+          markup: svelteFile.markup,
+          map,
+          filename: svelteFile.filename,
+          attributes: resultAttributes ?? svelteFile.attributes,
+        },
       );
 
       code = transformed.code;

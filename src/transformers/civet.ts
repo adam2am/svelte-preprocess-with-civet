@@ -1,4 +1,6 @@
 import civet from '@danielx/civet';
+import { findConfig, loadConfig } from '@danielx/civet/config';
+import path from 'path';
 
 import type { Transformer, Options } from '../types';
 
@@ -8,15 +10,32 @@ interface CivetSourceMapInstance {
   // Add other properties like lines, source, etc., if needed for type checking, but json() is key
 }
 
-const transformer: Transformer<Options.Civet> = ({
+const transformer: Transformer<Options.Civet> = async ({
   content,
   filename, // This should be the original Svelte/Civet filename
   options, 
   attributes,
 }) => {
+  let discoveredOptions = {};
+  if (filename) {
+    try {
+      const configPath = await findConfig(path.dirname(filename));
+      if (configPath) {
+        discoveredOptions = (await loadConfig(configPath)) || {};
+      }
+    } catch (e) {
+      // Don't fail the build if config discovery fails, just warn.
+      console.warn(
+        `svelte-preprocess-with-civet: Error while searching for Civet config file. \n` +
+        `The error was: ${e}`
+      );
+    }
+  }
+
   const civetCompilationOptions = {
     filename,
     js: false, 
+    ...discoveredOptions,
     ...options, 
     sync: true, 
   };

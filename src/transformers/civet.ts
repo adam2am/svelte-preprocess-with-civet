@@ -122,7 +122,7 @@ const transformer: Transformer<Options.Civet> = async (rawArgs) => {
 
             for (const p of priority) {
               if (categories.has(p)) {
-                summary.push(`\t- ${p} (${categories.get(p)}, ...)`);
+                summary.push(`\t${p} (${categories.get(p)}, ...)`);
                 categories.delete(p);
               }
             }

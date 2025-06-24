@@ -23,6 +23,11 @@ export type Civet = {
   sourceMap?: boolean; // For requesting { code, sourceMap } object from Civet
   inlineMap?: boolean; // For requesting code with inline map comment from Civet
   parseOptions?: ParseOptions;
+  /**
+   * If false, Civet syntax errors will be swallowed and returned as empty output
+   * instead of throwing, effectively silencing linter squiggles. Default: true
+   */
+  parseError?: boolean;
 } & ContentModifier;
 
 export type Coffeescript = {

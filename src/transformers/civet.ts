@@ -10,12 +10,17 @@ interface CivetSourceMapInstance {
   // Add other properties like lines, source, etc., if needed for type checking, but json() is key
 }
 
-const transformer: Transformer<Options.Civet> = async ({
-  content,
-  filename, // This should be the original Svelte/Civet filename
-  options, 
-  attributes,
-}) => {
+const transformer: Transformer<Options.Civet> = async (rawArgs) => {
+  // Allow custom meta fields without extending the public TransformerArgs type
+  const {
+    content,
+    filename,
+    options,
+    attributes,
+    scriptTagLine = 1,
+    indentLen = 0,
+  } = rawArgs as any;
+
   let discoveredOptions = {};
   if (filename) {
     try {
@@ -24,7 +29,6 @@ const transformer: Transformer<Options.Civet> = async ({
         discoveredOptions = (await loadConfig(configPath)) || {};
       }
     } catch (e) {
-      // Don't fail the build if config discovery fails, just warn.
       console.warn(
         `svelte-preprocess-with-civet: Error while searching for Civet config file. \n` +
         `The error was: ${e}`
@@ -34,62 +38,59 @@ const transformer: Transformer<Options.Civet> = async ({
 
   const civetCompilationOptions = {
     filename,
-    js: false, 
+    js: false,
     ...discoveredOptions,
-    ...options, 
-    sync: true, 
+    ...options,
+    sourceMap: true,
+    inlineMap: false,
+    sync: true,
   };
+
   const outputLang = civetCompilationOptions.js ? 'js' : 'ts';
 
-  if (civetCompilationOptions.sourceMap && !civetCompilationOptions.inlineMap) {
-    const civetResult = civet.compile(content, { ...civetCompilationOptions, sourceMap: true, ast: undefined }) as unknown as { code: string; sourceMap?: CivetSourceMapInstance }; // Type assertion
-    
-    if (typeof civetResult === 'object' && civetResult !== null && civetResult.code && civetResult.sourceMap && typeof civetResult.sourceMap.json === 'function') {
+  try {
+    const civetResult = civet.compile(content, civetCompilationOptions) as unknown as {
+      code: string;
+      sourceMap?: CivetSourceMapInstance;
+    };
+
+    let v3Map: object | undefined = undefined;
+    if (civetResult?.sourceMap && typeof civetResult.sourceMap.json === 'function') {
       const outputMapFileName = filename ? `${filename}.${outputLang}` : `output.${outputLang}`;
-      const v3Map = civetResult.sourceMap.json(filename || 'input.civet', outputMapFileName);
-      return { code: civetResult.code, map: v3Map, attributes: { ...attributes, lang: outputLang } };
-    } else {
-      console.warn(
-        'svelte-preprocess-with-civet: Civet did not return expected { code, sourceMap with json() } object ' +
-        'when called with sourceMap:true and sync:true. Output from Civet:', civetResult
-      );
-      const fallbackCode = typeof civetResult === 'object' && civetResult !== null && civetResult.code ? civetResult.code : 
-                           typeof civetResult === 'string' ? civetResult : content; 
-      return { code: fallbackCode, attributes: { ...attributes, lang: outputLang } };
+      v3Map = civetResult.sourceMap.json(filename || 'input.civet', outputMapFileName);
     }
-  }
-  else if (civetCompilationOptions.inlineMap) {
-    const compiledCodeWithInlineMap = civet.compile(content, civetCompilationOptions);
-    
-    if (typeof compiledCodeWithInlineMap === 'string') {
-      console.warn(
-        'svelte-preprocess-with-civet: inlineMap:true was used, but parsing the inline map comment ' +
-        'and extracting the map object is not yet fully implemented in this preprocessor. ' +
-        'The raw code (including the inline map comment) will be returned without a separate map object.'
-      );
-      return { code: compiledCodeWithInlineMap, attributes: { ...attributes, lang: outputLang } };
-    } else {
-      console.warn(
-        'svelte-preprocess-with-civet: Civet did not return expected string output ' +
-        'when called with inlineMap:true and sync:true. Output from Civet:', compiledCodeWithInlineMap
-      );
-      const fallbackCode = typeof compiledCodeWithInlineMap === 'string' ? compiledCodeWithInlineMap : content;
-      return { code: fallbackCode, attributes: { ...attributes, lang: outputLang } };
+
+    return {
+      code: civetResult.code,
+      map: v3Map,
+      civetMapInstance: civetResult.sourceMap,
+      attributes: { ...attributes, lang: outputLang },
+    };
+  } catch (err: any) {
+    // Map Civet ParseError (with numeric or string fields) to a Svelte error at the correct location
+    if (err?.name === 'ParseError') {
+      // If user disabled parse errors, swallow and return empty result
+      if (options && (options as any).parseError === false) {
+        return { code: '', diagnostics: [] } as any;
+      }
+
+      if (err.line != null && err.column != null) {
+        const relLine = Number(err.line);
+        const relCol = Number(err.column);
+        const absLine = scriptTagLine + relLine;
+        const absCol = indentLen + relCol - 1;
+
+        const mappedError: any = new Error(`Civet: ${err.message}`);
+        mappedError.name = 'CivetParseError';
+        mappedError.start = { line: absLine, column: absCol };
+        mappedError.end = { line: absLine, column: absCol + 1 };
+
+        throw mappedError;
+      }
     }
-  }
-  else {
-    const compiledCode = civet.compile(content, civetCompilationOptions);
-    if (typeof compiledCode === 'string'){
-        return { code: compiledCode, attributes: { ...attributes, lang: outputLang } };
-    } else {
-        console.warn(
-            'svelte-preprocess-with-civet: Civet did not return expected string output ' +
-            'when no source map was requested. Output from Civet:', compiledCode
-        );
-        const fallbackCode = typeof compiledCode === 'object' && compiledCode !== null && (compiledCode as any).code ? (compiledCode as any).code :
-                             typeof compiledCode === 'string' ? compiledCode : content;
-        return { code: fallbackCode, attributes: { ...attributes, lang: outputLang } };
-    }
+
+    // Not a Civet parse error we can map, re-throw
+    throw err;
   }
 };
 

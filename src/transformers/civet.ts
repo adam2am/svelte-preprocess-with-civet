@@ -68,8 +68,8 @@ const transformer: Transformer<Options.Civet> = async (rawArgs) => {
   } catch (err: any) {
     // Map Civet ParseError (with numeric or string fields) to a Svelte error at the correct location
     if (err?.name === 'ParseError') {
-      // If user disabled parse errors, swallow and return empty result
-      if (options && (options as any).parseError === false) {
+      // If parseError is not explicitly set to true, swallow and return empty result (default behavior)
+      if (!options || (options as any).parseError !== true) {
         return { code: '', diagnostics: [] } as any;
       }
 

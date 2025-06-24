@@ -10,6 +10,7 @@ import {
 } from './modules/language';
 import { prepareContent } from './modules/prepareContent';
 import { transformMarkup } from './modules/markup';
+import { chainSourceMaps } from './modules/civetmap';
 
 import type {
   AutoPreprocessGroup,
@@ -182,7 +183,52 @@ export function sveltePreprocess(
   };
 
   const script: PreprocessorGroup['script'] = async (svelteFile) => {
-    // scriptTransformer will call the Civet processor (or others based on lang)
+    const { lang, alias } = getLanguage(svelteFile.attributes);
+
+    // Special handling for the Civet -> TypeScript pipeline
+    if (lang === 'civet' || alias === 'civet') {
+      // Calculate the common indentation to be added back by the sourcemap chainer.
+      const getCommonIndent = (text: string) => {
+        const match = text.match(/^[ \t]*(?=\S)/gm);
+        if (!match) return 0;
+        return match.reduce((r, a) => Math.min(r, a.length), Infinity);
+      };
+      const indentation = getCommonIndent(svelteFile.content);
+
+      // 1. Run Civet transformer
+      const civetTransformerOptions = getTransformerOptions('civet');
+      const civetProcessed = await transform('civet', civetTransformerOptions, {
+        content: prepareContent({ options: civetTransformerOptions, content: svelteFile.content }),
+        markup: svelteFile.markup,
+        filename: svelteFile.filename,
+        attributes: svelteFile.attributes,
+      });
+
+      // 2. Run TypeScript transformer on the result of the Civet one
+      const tsTransformerOptions = getTransformerOptions('typescript');
+      const tsProcessed = await transform('typescript', tsTransformerOptions, {
+        content: civetProcessed.code,
+        markup: svelteFile.markup,
+        filename: svelteFile.filename,
+        attributes: civetProcessed.attributes,
+      });
+
+      // 3. Chain the sourcemaps
+      const chainedMap = chainSourceMaps(
+        civetProcessed.map as any,
+        tsProcessed.map as any,
+        { indentation },
+      );
+      
+      return {
+        code: tsProcessed.code,
+        map: chainedMap,
+        dependencies: concat(civetProcessed.dependencies, tsProcessed.dependencies),
+        diagnostics: concat(civetProcessed.diagnostics, tsProcessed.diagnostics),
+      };
+    }
+
+    // Default behavior for other languages
     const transformResult = (await scriptTransformer(
       svelteFile,
     )) as Processed & { attributes?: Record<string, any> };
@@ -195,6 +241,7 @@ export function sveltePreprocess(
       attributes: resultAttributes,
     } = transformResult;
 
+    const civetMap = typeof map === 'string' ? JSON.parse(map) : map;
     const originalTagInfo = await getTagInfo(svelteFile);
 
     // If the transformer (e.g., Civet) outputted TypeScript,
@@ -220,11 +267,15 @@ export function sveltePreprocess(
           typeof tsTransformerOptions === 'boolean'
             ? undefined
             : (tsTransformerOptions as Options.Typescript),
-        map: map as any, // Pass the source map from the previous step
       });
 
       code = tsProcessed.code;
-      map = tsProcessed.map;
+      // The new map is the TS -> JS map. We need to chain it with the previous civet -> TS map.
+      const tsMap =
+        typeof tsProcessed.map === 'string'
+          ? JSON.parse(tsProcessed.map)
+          : tsProcessed.map;
+      map = chainSourceMaps(civetMap, tsMap);
       dependencies = concat(dependencies, tsProcessed.dependencies);
       diagnostics = concat(diagnostics, tsProcessed.diagnostics);
     }
